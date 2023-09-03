@@ -41,6 +41,34 @@ class AuthController extends Controller {
         ctx.returnBody(true, { access_token: token, userInfo: userData }, "注册成功!")
 
     }
+
+    /**
+	 * 登录
+	 * @returns {Promise<void>}
+	 */
+	async login() {
+		const { ctx, service } = this;
+		const { username, password } = ctx.request.body
+		// 验证是否存在
+		let user = await service.user.getUsersByUsername(username);
+		if (!user) {
+			ctx.returnBody(false, {}, "用户不存在！");
+			return;
+		}
+		// 校验密码
+		const userCurrentPass = await service.user.getUsersPasswordByUsername(username);
+		const verifyPass = await ctx.helper.checkPassword(password, userCurrentPass.password)
+		if (!verifyPass) {
+			ctx.returnBody(false, '', "密码错误，请重试！");
+			return;
+		}
+
+		user = user.toObject();
+		let userDataStr = JSON.parse(JSON.stringify(user));
+		// 生成token
+		let token =await ctx.getToken(userDataStr);
+		ctx.returnBody(true, {access_token: token, userInfo: user}, "登录成功!")
+	}
 }
 
 module.exports = AuthController;
